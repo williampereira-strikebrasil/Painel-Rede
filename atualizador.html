@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex" />
+<title>Atualizador do Painel</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg:#0D1117; --panel:#151B23; --panel2:#1B2330; --line:#283341; --txt:#E8EEF4; --muted:#8A97A6; --or:#FF7A45; --cy:#3FC1D0; --ok:#3FB950; --warn:#F5A524; --err:#F85149; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:14px/1.5 Inter, system-ui, sans-serif; }
+  main { max-width:860px; margin:0 auto; padding:28px 16px 60px; }
+  .eyebrow { color:var(--or); font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
+  h1 { margin:4px 0 6px; font-size:24px; }
+  .sub { color:var(--muted); font-size:13px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; margin-top:16px; }
+  .step { display:flex; gap:12px; align-items:flex-start; }
+  .num { flex:0 0 26px; height:26px; border-radius:50%; background:var(--panel2); border:1px solid var(--line); display:grid; place-items:center; font-weight:700; font-size:13px; color:var(--or); }
+  .num.done { background:var(--ok); color:#0D1117; border-color:var(--ok); }
+  .step h2 { margin:2px 0 4px; font-size:15px; }
+  #drop { margin-top:12px; border:2px dashed var(--line); border-radius:12px; padding:30px 16px; text-align:center; cursor:pointer; transition:.15s; color:var(--muted); }
+  #drop.over, #drop:hover { border-color:var(--or); color:var(--txt); background:#1a1410; }
+  #drop b { color:var(--txt); }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:12px; }
+  .kpi { background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .kpi .l { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  .kpi .v { font:600 20px 'JetBrains Mono', monospace; }
+  table { width:100%; border-collapse:collapse; margin-top:12px; font-size:13px; }
+  th, td { padding:7px 8px; border-bottom:1px solid var(--line); text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  td { font-family:'JetBrains Mono', monospace; }
+  .up { color:var(--ok); } .down { color:var(--warn); }
+  .msg { border-radius:10px; padding:10px 12px; margin-top:10px; font-size:13px; }
+  .msg.ok { background:#12261a; border:1px solid #23863633; color:#7ee2a0; }
+  .msg.warn { background:#2a2110; border:1px solid #f5a52455; color:#f8c873; }
+  .msg.err { background:#2d1214; border:1px solid #f8514955; color:#ff9b95; }
+  button { font:600 14px Inter, sans-serif; border:0; border-radius:10px; padding:11px 18px; cursor:pointer; background:var(--or); color:#16100c; }
+  button:disabled { opacity:.35; cursor:not-allowed; }
+  button.sec { background:var(--panel2); color:var(--txt); border:1px solid var(--line); }
+  ol { margin:8px 0 0; padding-left:18px; color:var(--muted); } ol b { color:var(--txt); }
+  .hidden { display:none; }
+  code { font-family:'JetBrains Mono', monospace; background:var(--panel2); padding:1px 5px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">Painel da Rede · rotina diária</div>
+  <h1>Atualizador de dados</h1>
+  <div class="sub">O CSV é processado aqui no seu navegador e não é enviado para nenhum servidor. O que vai para o GitHub é só o arquivo <code>dados.js</code> gerado, com os números já resumidos.</div>
+
+  <div class="card">
+    <div class="step"><div class="num" id="n1">1</div><div style="flex:1">
+      <h2>Base atual</h2>
+      <div id="baseInfo" class="sub">Carregando a base publicada…</div>
+      <div id="baseManual" class="hidden" style="margin-top:8px">
+        <div class="msg warn">Não consegui ler a base publicada (isso acontece se a página foi aberta direto do computador). Selecione o <code>dados.js</code> atual:</div>
+        <input type="file" id="baseFile" accept=".js" style="margin-top:8px;color:var(--muted)" />
+      </div>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><div class="num" id="n2">2</div><div style="flex:1">
+      <h2>Arraste o CSV do FileService</h2>
+      <div class="sub">Export completo (todos os tipos). Pode ser só o mês vigente: os meses que estiverem no arquivo substituem os da base, e os demais ficam intactos.</div>
+      <div id="drop"><b>Solte o arquivo .csv aqui</b><br />ou clique para escolher</div>
+      <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden" />
+      <div id="msgs"></div>
+      <div id="resumo" class="hidden"></div>
+    </div></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><div class="num" id="n3">3</div><div style="flex:1">
+      <h2>Baixe e suba no GitHub</h2>
+      <button id="btnDown" disabled>Baixar dados.js</button>
+      <ol>
+        <li>Abra o repositório <b>Painel-Rede</b> no GitHub → <b>Add file → Upload files</b>.</li>
+        <li>Arraste o <b>dados.js</b> baixado → <b>Commit changes</b>.</li>
+        <li>Em ~1 minuto o link do painel mostra os dados novos.</li>
+      </ol>
+      <div class="sub" style="margin-top:8px">⚠️ Se o navegador salvar como <code>dados (1).js</code>, renomeie para <code>dados.js</code> antes de subir.</div>
+    </div></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var BASE = null, NOVO = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = function (n) { return Math.round(n).toLocaleString("pt-BR"); };
+  var MESES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  var mesLabel = function (ym) { return MESES[(ym % 100) - 1] + "/" + String(Math.floor(ym / 100)).slice(2); };
+  var dataBR = function (s) { return s.split("-").reverse().join("/"); };
+  var TIPOS_CRED = ["Novo Serviço", "Troca de S.W."];
+  var interno = function (k) { k = (k || "").toLowerCase(); return k.indexOf("desenvolv") >= 0 || k.indexOf("treinamento") >= 0; };
+
+  function parseBase(txt) {
+    var i = txt.indexOf("{"), j = txt.lastIndexOf("}");
+    var D = JSON.parse(txt.slice(i, j + 1));
+    if (!D.rec || !D.ukeys || !D.tipos) throw new Error("arquivo não parece ser o dados.js do painel");
+    D.motivos = D.motivos || [""];
+    return D;
+  }
+  function mostraBase() {
+    $("baseInfo").innerHTML = "Base carregada: <b>" + fmt(BASE.rec.length) + "</b> registros, de " + dataBR(BASE.meta.dataInicio) + " até <b>" + dataBR(BASE.meta.dataFim) + "</b>.";
+    $("n1").classList.add("done"); $("n1").textContent = "✓";
+    $("baseManual").classList.add("hidden");
+  }
+  fetch("dados.js?v=" + Date.now(), { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(function (t) { BASE = parseBase(t); mostraBase(); })
+    .catch(function () { $("baseInfo").textContent = ""; $("baseManual").classList.remove("hidden"); });
+  $("baseFile").onchange = function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    f.text().then(function (t) { try { BASE = parseBase(t); mostraBase(); } catch (err) { msg("err", "Arquivo de base inválido: " + err.message); } });
+  };
+
+  // CSV com ; e aspas
+  function parseCSV(txt) {
+    var rows = [], row = [], f = "", q = false, c, i = 0, n = txt.length;
+    for (; i < n; i++) {
+      c = txt[i];
+      if (q) { if (c === '"') { if (txt[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+      else if (c === '"') q = true;
+      else if (c === ";") { row.push(f); f = ""; }
+      else if (c === "\n") { row.push(f); rows.push(row); row = []; f = ""; }
+      else if (c !== "\r") f += c;
+    }
+    if (f !== "" || row.length) { row.push(f); rows.push(row); }
+    return rows.filter(function (r) { return r.length > 1 || (r[0] || "").trim() !== ""; });
+  }
+
+  function msg(tipo, html) { var d = document.createElement("div"); d.className = "msg " + tipo; d.innerHTML = html; $("msgs").appendChild(d); }
+
+  function resumoMes(D, rec, ym) {
+    var cred = new Set(TIPOS_CRED.map(function (t) { return D.tipos.indexOf(t); }));
+    var refz = new Set(); D.tipos.forEach(function (t, i) { if (/^Refazendo|^R\.T\.S/.test(t)) refz.add(i); });
+    var o = { reg: 0, serv: 0, cred: 0, retr: 0 };
+    rec.forEach(function (r) {
+      if (Math.floor(r[0] / 100) !== ym || interno(D.ukeys[r[1]])) return;
+      o.reg++;
+      if (cred.has(r[6])) { o.serv++; o.cred += r[2]; }
+      if (refz.has(r[6])) o.retr++;
+    });
+    return o;
+  }
+
+  function processa(txt) {
+    $("msgs").innerHTML = ""; $("resumo").classList.add("hidden"); $("btnDown").disabled = true; NOVO = null;
+    $("n2").classList.remove("done"); $("n2").textContent = "2";
+    if (!BASE) { msg("err", "A base atual ainda não foi carregada (passo 1)."); return; }
+    var rows = parseCSV(txt);
+    if (rows.length < 2) { msg("err", "O arquivo está vazio."); return; }
+    var H = rows[0].map(function (h) { return h.trim(); });
+    var col = function (nome) { return H.indexOf(nome); };
+    var need = ["Data", "Registrado por", "Custo", "Categoria", "Situação", "Tipo Serviço", "Tempo de retorno (minutos)", "Responsável Técnico"];
+    var falt = need.filter(function (n) { return col(n) < 0; });
+    if (falt.length) { msg("err", "Colunas não encontradas no CSV: <b>" + falt.join(", ") + "</b>. Confira se é o export do FileService."); return; }
+    var cMR = col("Motivo do Refazendo"), cMT = col("Motivo do R.T.S.");
+
+    var D = JSON.parse(JSON.stringify(BASE));
+    var idx = function (lst, v) { var i = lst.indexOf(v); if (i < 0) { lst.push(v); i = lst.length - 1; } return i; };
+    var prim = function (t) { t = (t || "").trim(); return t ? t.replace(/_/g, " ").split(/\s+/)[0] : "—"; };
+    var unidNovas = new Set(), novos = [], ignor = 0, datasRuins = 0;
+    for (var i = 1; i < rows.length; i++) {
+      var r = rows[i], g = function (c) { return c >= 0 ? (r[c] || "") : ""; };
+      var p = g(col("Data")).trim().split("/");
+      if (p.length !== 3) { datasRuins++; continue; }
+      var ymd = parseInt(p[2] + p[1] + p[0], 10);
+      if (!(ymd >= 20240101)) { ignor++; continue; }
+      var k = g(col("Registrado por")).trim().toLowerCase();
+      if (interno(k)) continue;
+      if (D.ukeys.indexOf(k) < 0) { D.ukeys.push(k); unidNovas.add(k); }
+      var tempo = g(col("Tempo de retorno (minutos)")).trim();
+      var mot = (g(cMR).trim() || g(cMT).trim());
+      novos.push([ymd, D.ukeys.indexOf(k), parseInt(g(col("Custo")), 10) || 0,
+        idx(D.cats, g(col("Categoria"))), idx(D.tecs, prim(g(col("Responsável Técnico")))),
+        idx(D.sits, g(col("Situação"))), idx(D.tipos, g(col("Tipo Serviço")).trim()),
+        tempo ? parseInt(tempo, 10) : -1, mot ? idx(D.motivos, mot) : 0]);
+    }
+    if (!novos.length) { msg("err", "Nenhum registro válido encontrado no arquivo."); return; }
+    if (datasRuins) msg("warn", datasRuins + " linha(s) com data inválida foram ignoradas.");
+
+    var meses = Array.from(new Set(novos.map(function (r) { return Math.floor(r[0] / 100); }))).sort();
+    var mSet = new Set(meses);
+    var rec = D.rec.filter(function (r) { return !mSet.has(Math.floor(r[0] / 100)); }).concat(novos);
+    rec.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    D.rec = rec;
+
+    var bill = new Set(TIPOS_CRED.map(function (t) { return D.tipos.indexOf(t); }));
+    var br = rec.filter(function (r) { return bill.has(r[6]) && !interno(D.ukeys[r[1]]); });
+    var maxd = 0, mind = 99999999; rec.forEach(function (r) { if (r[0] > maxd) maxd = r[0]; if (r[0] < mind) mind = r[0]; });
+    var iso = function (d) { var s = String(d); return s.slice(0, 4) + "-" + s.slice(4, 6) + "-" + s.slice(6, 8); };
+    var hoje = new Date(); var hj = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, "0") + "-" + String(hoje.getDate()).padStart(2, "0");
+    D.meta.dataInicio = Math.floor(mind / 10000) + "-01-01";
+    D.meta.dataFim = iso(maxd);
+    D.meta.totalRegistros = br.length;
+    D.meta.totalConsumo = br.reduce(function (s, r) { return s + r[2]; }, 0);
+    D.meta.geradoEm = hj;
+    if (D.cats.indexOf("Máquinas Pesadas/Agrícolas") >= 0) D.meta.agroIdx = D.cats.indexOf("Máquinas Pesadas/Agrícolas");
+    var cad = new Set(D.unidades.map(function (u) { return u.key; }));
+    D.ukeys.forEach(function (k) {
+      if (!cad.has(k) && !interno(k)) D.unidades.push({ cod: k.replace(/\b\w/g, function (c) { return c.toUpperCase(); }), key: k, ranking: null, nivel: "—", nota: null, status: null, cidade: null, uf: null, regiao: null, modelo: null, idade: null, metaPct: null });
+    });
+
+    // conferências
+    var maxBase = parseInt(BASE.meta.dataFim.replace(/-/g, ""), 10);
+    if (maxd < maxBase) msg("warn", "A última data do arquivo (" + dataBR(iso(maxd)) + ") é <b>anterior</b> à da base publicada (" + dataBR(BASE.meta.dataFim) + "). Confira se é o export mais recente.");
+    var ymBase = Math.floor(maxBase / 100);
+    var fechados = meses.filter(function (m) { return m < ymBase; });
+    if (fechados.length) msg("warn", "O arquivo também traz mês(es) já existente(s) na base: <b>" + fechados.map(mesLabel).join(", ") + "</b>. Eles serão substituídos por completo pelo conteúdo deste arquivo.");
+    if (unidNovas.size) msg("warn", "Unidade(s) que não existiam na base: <b>" + Array.from(unidNovas).join(", ") + "</b>. Entram no painel sem cluster até serem cadastradas. Se for erro de digitação no FileService, corrija antes de subir.");
+    if (ignor) msg("warn", ignor + " registro(s) anteriores a 2024 foram ignorados.");
+
+    var linhas = meses.map(function (m) {
+      var a = resumoMes(BASE, BASE.rec, m), b = resumoMes(D, rec, m);
+      var d = function (x, y) { var df = y - x; return df === 0 ? '<span class="sub">=</span>' : '<span class="' + (df > 0 ? "up" : "down") + '">' + (df > 0 ? "+" : "") + fmt(df) + "</span>"; };
+      if (b.reg < a.reg) msg("warn", "Em <b>" + mesLabel(m) + "</b> o arquivo tem <b>menos registros</b> (" + fmt(b.reg) + ") que a base publicada (" + fmt(a.reg) + "). Pode ser estorno/remoção, mas confira se o export veio completo.");
+      return "<tr><td>" + mesLabel(m) + "</td><td>" + fmt(b.serv) + " " + d(a.serv, b.serv) + "</td><td>" + fmt(b.cred) + " " + d(a.cred, b.cred) + "</td><td>" + fmt(b.retr) + " " + d(a.retr, b.retr) + "</td><td>" + fmt(b.reg) + " " + d(a.reg, b.reg) + "</td></tr>";
+    }).join("");
+    var ult = resumoMes(D, rec, meses[meses.length - 1]);
+    var refzMes = 0, refzMot = 0, refzSet = new Set(); D.tipos.forEach(function (t, i) { if (/^Refazendo|^R\.T\.S/.test(t)) refzSet.add(i); });
+    rec.forEach(function (r) { if (Math.floor(r[0] / 100) === meses[meses.length - 1] && refzSet.has(r[6])) { refzMes++; if (r[8]) refzMot++; } });
+
+    $("resumo").innerHTML =
+      '<div class="msg ok">Arquivo lido: <b>' + fmt(novos.length) + "</b> registros · " + dataBR(iso(Math.min.apply(null, novos.map(function (r) { return r[0]; })))) + " a " + dataBR(iso(maxd)) + " · substitui " + meses.map(mesLabel).join(", ") + "</div>" +
+      '<div class="kpis">' +
+        '<div class="kpi"><div class="l">Serviços c/ crédito · ' + mesLabel(meses[meses.length - 1]) + '</div><div class="v" style="color:var(--cy)">' + fmt(ult.serv) + "</div></div>" +
+        '<div class="kpi"><div class="l">Créditos · ' + mesLabel(meses[meses.length - 1]) + '</div><div class="v" style="color:var(--or)">' + fmt(ult.cred) + "</div></div>" +
+        '<div class="kpi"><div class="l">Refazendo + R.T.S.</div><div class="v">' + fmt(refzMes) + '</div><div class="sub" style="font-size:11px">' + fmt(refzMot) + " com motivo</div></div>" +
+        '<div class="kpi"><div class="l">Base nova até</div><div class="v">' + dataBR(D.meta.dataFim) + "</div></div>" +
+      "</div>" +
+      "<table><thead><tr><th>Mês</th><th>Serviços c/ crédito</th><th>Créditos</th><th>Refaz./RTS</th><th>Registros</th></tr></thead><tbody>" + linhas + "</tbody></table>" +
+      '<div class="sub" style="margin-top:6px;font-size:12px">O número colorido ao lado de cada valor é a diferença em relação à base publicada hoje.</div>';
+    $("resumo").classList.remove("hidden");
+    $("n2").classList.add("done"); $("n2").textContent = "✓";
+    NOVO = D; $("btnDown").disabled = false;
+  }
+
+  function lerArquivo(f) {
+    if (!f) return;
+    f.arrayBuffer().then(function (buf) {
+      var txt = new TextDecoder("utf-8", { fatal: true });
+      try { txt = txt.decode(buf); } catch (e) { txt = new TextDecoder("windows-1252").decode(buf); }
+      processa(txt.replace(/^﻿/, ""));
+    });
+  }
+  var drop = $("drop");
+  drop.onclick = function () { $("csvFile").click(); };
+  $("csvFile").onchange = function (e) { lerArquivo(e.target.files[0]); e.target.value = ""; };
+  ["dragenter", "dragover"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); }); });
+  ["dragleave", "drop"].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("over"); }); });
+  drop.addEventListener("drop", function (e) { lerArquivo(e.dataTransfer.files[0]); });
+
+  $("btnDown").onclick = function () {
+    if (!NOVO) return;
+    var blob = new Blob(["window.__DADOS__=" + JSON.stringify(NOVO) + ";"], { type: "text/javascript" });
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "dados.js";
+    document.body.appendChild(a); a.click(); a.remove();
+    $("n3").classList.add("done"); $("n3").textContent = "✓";
+  };
+})();
+</script>
+</body>
+</html>
